@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Country Flag Survival</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+        
+        <!-- Loading Screen -->
+        <div id="loading-screen">
+            <h1>🏳️ FLAG SURVIVAL 🏳️</h1>
+            <p>Loading Flag Images...</p>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill"></div>
+            </div>
+            <p id="load-status">0/150</p>
+        </div>
+        
+        <!-- UI Overlay -->
+        <div id="ui-overlay">
+            <!-- Leaderboard -->
+            <div id="leaderboard">
+                <h3>🏆 TOP COUNTRIES</h3>
+                <div id="leaderboard-content">
+                    <p class="no-data">No wins yet</p>
+                </div>
+            </div>
+            
+            <!-- Remaining Count -->
+            <div id="remaining-count">
+                <span id="alive-count">100</span> Flags Remaining
+            </div>
+            
+            <!-- Game Title -->
+            <div id="game-title">FLAG SURVIVAL</div>
+            
+            <!-- Controls Info -->
+            <div id="controls-info">
+                <span>← → Control Gap Speed</span>
+                <span>SPACE Restart</span>
+            </div>
+        </div>
+        
+        <!-- Winner Screen -->
+        <div id="winner-screen" class="hidden">
+            <div class="winner-content">
+                <h2>🎉 WINNER 🎉</h2>
+                <div id="winner-flag-container">
+                    <img id="winner-flag" src="" alt="Winner Flag">
+                </div>
+                <h1 id="winner-name"></h1>
+                <p id="countdown-text">Next round in 5s</p>
+                <p class="restart-hint">Press SPACE to restart or wait</p>
+            </div>
+        </div>
+    </div>
+    
+    <script src="game.js"></script>
+</body>
+</html>
