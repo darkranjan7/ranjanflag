@@ -137,29 +137,49 @@ class Flag {
                 return; // Already settled at bottom
             }
             
-            // Natural arc falling with gravity
+            // ===== FALLING PHYSICS (no collision with other flags) =====
+            
+            // Apply gravity with slight acceleration
+            this.gravity = Math.min(this.gravity + 0.005, 0.5); // Gradual gravity increase
             this.fallVy += this.gravity;
+            
+            // Apply air resistance (more realistic)
+            const airResistance = 0.995;
+            this.vx *= airResistance;
+            this.fallVy *= 0.999; // Less resistance vertically
+            
+            // Update position
             this.y += this.fallVy;
-            this.x += this.vx * 0.98;
-            this.vx *= 0.99;
+            this.x += this.vx;
+            
+            // Rotation speeds up as flag falls (tumbling effect)
+            this.rotationSpeed += (Math.random() - 0.5) * 0.3;
+            this.rotationSpeed = Math.max(-8, Math.min(8, this.rotationSpeed)); // Limit rotation
             this.rotation += this.rotationSpeed;
             
-            // Keep within screen bounds horizontally
-            if (this.x < 20) {
-                this.x = 20;
-                this.vx = Math.abs(this.vx) * 0.5;
-            } else if (this.x > SCREEN_WIDTH - 20) {
-                this.x = SCREEN_WIDTH - 20;
-                this.vx = -Math.abs(this.vx) * 0.5;
+            // Slight wobble effect (wind simulation)
+            this.vx += (Math.random() - 0.5) * 0.1;
+            
+            // Keep within screen bounds horizontally (bounce off edges)
+            if (this.x < 15) {
+                this.x = 15;
+                this.vx = Math.abs(this.vx) * 0.6;
+                this.rotationSpeed *= -0.8; // Reverse rotation on bounce
+            } else if (this.x > SCREEN_WIDTH - 15) {
+                this.x = SCREEN_WIDTH - 15;
+                this.vx = -Math.abs(this.vx) * 0.6;
+                this.rotationSpeed *= -0.8;
             }
             
-            // Land at bottom
-            const groundY = SCREEN_HEIGHT - 55 - Math.random() * 30;
+            // Land at bottom with slight randomness
+            const groundY = SCREEN_HEIGHT - 50 - Math.random() * 35;
             if (this.y >= groundY) {
                 this.y = groundY;
+                this.x += (Math.random() - 0.5) * 10; // Slight scatter on landing
                 this.vx = 0;
                 this.fallVy = 0;
                 this.rotationSpeed = 0;
+                this.rotation = (Math.random() - 0.5) * 20; // Random final rotation
                 this.eliminated = true;
             }
             return;
@@ -208,13 +228,25 @@ class Flag {
         const boundary = CIRCLE_RADIUS - 18;
         if (distance > boundary) {
             if (inGap) {
-                // Flag escapes through gap
+                // Flag escapes through gap - natural exit trajectory
                 this.alive = false;
                 this.falling = true;
+                this.gravity = 0.15; // Reset gravity for falling
+                
                 if (distance > 0) {
-                    const outwardSpeed = 2.5;
-                    this.vx = (dx / distance) * outwardSpeed + this.vx * 0.3;
-                    this.fallVy = 0.5;
+                    // Maintain momentum in exit direction
+                    const currentSpeed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+                    const exitSpeed = Math.max(currentSpeed * 0.8, 2.0);
+                    
+                    // Direction towards gap center with some of original velocity
+                    const exitDirX = dx / distance;
+                    const exitDirY = dy / distance;
+                    
+                    this.vx = exitDirX * exitSpeed * 0.7 + this.vx * 0.5;
+                    this.fallVy = Math.abs(exitDirY) * exitSpeed * 0.3 + 0.5;
+                    
+                    // Add random rotation for tumbling effect
+                    this.rotationSpeed = (Math.random() - 0.5) * 10;
                 }
             } else {
                 // Bounce off the wall - elastic collision
@@ -288,6 +320,7 @@ class Flag {
     
     // Check collision with another flag and resolve with natural physics
     collideWith(other) {
+        // Only collide if BOTH flags are alive (not falling/eliminated)
         if (!this.alive || !other.alive) return;
         
         const dx = other.x - this.x;
@@ -309,8 +342,8 @@ class Flag {
             
             // Only resolve if objects are moving towards each other
             if (dvn > 0) {
-                // Elastic collision impulse (equal masses)
-                const restitution = 0.95; // Slightly less than 1 for energy loss
+                // Elastic collision impulse (equal masses) with extra energy
+                const restitution = 1.1; // Slightly more than 1 for acceleration effect
                 const impulse = dvn * restitution;
                 
                 // Apply impulse to velocities
@@ -319,16 +352,49 @@ class Flag {
                 other.vx += impulse * nx;
                 other.vy += impulse * ny;
                 
+                // Activate speed boost for BOTH flags (like wall bounce)
+                this.boostTimer = 25;
+                this.boostMultiplier = 1.25;
+                other.boostTimer = 25;
+                other.boostMultiplier = 1.25;
+                
+                // Add small random deflection for more chaotic movement
+                const randomAngle1 = (Math.random() - 0.5) * 0.15;
+                const randomAngle2 = (Math.random() - 0.5) * 0.15;
+                this.vx += Math.cos(randomAngle1) * 0.2;
+                this.vy += Math.sin(randomAngle1) * 0.2;
+                other.vx += Math.cos(randomAngle2) * 0.2;
+                other.vy += Math.sin(randomAngle2) * 0.2;
+                
                 // Separate the flags to prevent overlap
                 const overlap = minDist - distance;
-                const separationX = (overlap / 2 + 0.5) * nx;
-                const separationY = (overlap / 2 + 0.5) * ny;
+                const separationX = (overlap / 2 + 1) * nx;
+                const separationY = (overlap / 2 + 1) * ny;
                 
                 this.x -= separationX;
                 this.y -= separationY;
                 other.x += separationX;
                 other.y += separationY;
+                
+                // Apply speed limits after collision
+                this.applySpeedLimits();
+                other.applySpeedLimits();
             }
+        }
+    }
+    
+    // Apply speed limits to keep movement controlled
+    applySpeedLimits() {
+        const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+        const maxSpeed = 3.5;
+        const minSpeed = 1.0;
+        
+        if (speed > maxSpeed) {
+            this.vx = (this.vx / speed) * maxSpeed;
+            this.vy = (this.vy / speed) * maxSpeed;
+        } else if (speed < minSpeed && speed > 0.1) {
+            this.vx = (this.vx / speed) * minSpeed;
+            this.vy = (this.vy / speed) * minSpeed;
         }
     }
 }
